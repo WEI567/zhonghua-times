@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAI 虛擬人物證據檔案系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+:root{
+  --red:#D42B2B;--rd:#8B0000;--rg:rgba(212,43,43,0.4);
+  --gold:#C9A84C;--gl:#F0D080;
+  --bg:#050A0E;--b2:#0A1018;--b3:#0F1820;
+  --br:rgba(201,168,76,0.22);--tx:#E8E0D0;--dm:#7A7060;
+  --gn:#3CB878;--bl:#4A9ECC;
+  --mono:'Share Tech Mono',monospace;
+  --sans:'Noto Sans TC',sans-serif;
+  --orb:'Orbitron',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:0 14px 80px;}
+
+/* ── Top Tab Bar ── */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(5,10,14,0.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:0;}
+.topbar-brand{font-family:var(--orb);font-size:10px;color:var(--gold);letter-spacing:.25em;padding:12px 14px;border-right:1px solid var(--br);white-space:nowrap;}
+.tab-btn{flex:1;padding:12px 6px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dm);font-family:var(--mono);font-size:10px;letter-spacing:.12em;cursor:pointer;transition:all .2s;text-align:center;}
+.tab-btn.active{color:var(--gl);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--tx);}
+
+/* ── Pages ── */
+.page{display:none;padding-top:24px;}
+.page.active{display:block;}
+
+/* ── Shared ── */
+.sec{background:var(--b2);border:1px solid var(--br);border-radius:4px;margin-bottom:18px;overflow:hidden;}
+.sec-hd{background:linear-gradient(90deg,rgba(212,43,43,.13),transparent);border-bottom:1px solid var(--br);padding:9px 14px;display:flex;align-items:center;gap:9px;}
+.sec-id{font-family:var(--mono);font-size:9px;color:var(--red);letter-spacing:.15em;min-width:58px;}
+.sec-tt{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.1em;}
+.sec-bd{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.sec-bd.full{grid-template-columns:1fr;}
+.sec-bd.tri{grid-template-columns:1fr 1fr 1fr;}
+.f{display:flex;flex-direction:column;gap:4px;}
+.f.s2{grid-column:span 2;}
+.f.s3{grid-column:span 3;}
+label.lbl{font-size:9px;color:var(--dm);letter-spacing:.15em;font-family:var(--mono);}
+input,select,textarea{background:var(--b3);border:1px solid rgba(201,168,76,.18);border-radius:3px;color:var(--tx);font-family:var(--sans);font-size:13px;padding:7px 9px;outline:none;transition:border-color .2s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+input::placeholder,textarea::placeholder{color:#3a3a3a;font-size:11px;}
+select option{background:var(--b3);}
+textarea{resize:vertical;min-height:64px;line-height:1.5;}
+.chk-g{display:flex;flex-wrap:wrap;gap:7px;padding:3px 0;}
+.chk-i{display:flex;align-items:center;gap:4px;cursor:pointer;}
+.chk-i input[type=checkbox]{width:13px;height:13px;accent-color:var(--gold);padding:0;}
+.chk-i span{font-size:11px;color:var(--tx);}
+
+/* Media */
+.up-area{border:2px dashed rgba(201,168,76,.28);border-radius:5px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(201,168,76,.02);}
+.up-area:hover{border-color:var(--gold);background:rgba(201,168,76,.06);}
+.up-area p{font-size:10px;color:var(--dm);font-family:var(--mono);}
+.up-area .ic{font-size:22px;margin-bottom:5px;}
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px;margin-top:9px;}
+.mth{position:relative;border-radius:3px;overflow:hidden;border:1px solid var(--br);background:var(--b3);}
+.mth img,.mth video{width:100%;height:74px;object-fit:cover;display:block;}
+.mth .rm{position:absolute;top:2px;right:2px;background:rgba(212,43,43,.88);border:none;color:#fff;font-size:9px;width:17px;height:17px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mth .ml{font-size:8px;font-family:var(--mono);color:var(--dm);padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.url-row{display:flex;gap:7px;margin-top:6px;}
+.url-row input{flex:1;}
+.url-btn{padding:7px 11px;background:rgba(201,168,76,.12);border:1px solid var(--br);border-radius:3px;color:var(--gold);font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .2s;}
+.url-btn:hover{background:rgba(201,168,76,.22);}
+
+/* Preset + Generate */
+.preset-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
+.btn-pre{display:block;width:100%;padding:12px 8px;background:rgba(201,168,76,.07);border:1px solid var(--br);border-radius:4px;color:var(--gold);font-family:var(--mono);font-size:10px;letter-spacing:.1em;cursor:pointer;transition:all .2s;text-align:center;}
+.btn-pre:hover{border-color:var(--gold);background:rgba(201,168,76,.16);}
+.btn-gen{display:block;width:100%;padding:15px;background:linear-gradient(135deg,var(--rd),var(--red));border:1px solid var(--red);border-radius:4px;color:#fff;font-family:var(--orb);font-size:12px;font-weight:700;letter-spacing:.22em;cursor:pointer;transition:all .2s;box-shadow:0 0 18px rgba(212,43,43,.28);margin-bottom:14px;}
+.btn-gen:hover{background:linear-gradient(135deg,var(--red),#FF4444);box-shadow:0 0 28px rgba(212,43,43,.55);}
+
+/* Output */
+#out-sec{display:none;}
+#out-sec.vis{display:block;}
+.out-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--br);}
+.out-tt{font-family:var(--orb);font-size:10px;color:var(--gold);letter-spacing:.18em;}
+.hash-b{font-family:var(--mono);font-size:8px;color:var(--dm);}
+.media-out{margin-bottom:18px;}
+.media-out-tt{font-family:var(--mono);font-size:9px;color:var(--red);letter-spacing:.2em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--br);}
+.mo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.mo-card{background:var(--b2);border:1px solid var(--br);border-radius:4px;overflow:hidden;}
+.mo-card img,.mo-card video{width:100%;max-height:120px;object-fit:cover;display:block;}
+.emb{position:relative;padding-top:56.25%;background:#000;}
+.emb iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+.mo-info{padding:4px 7px;}
+.mo-type{font-family:var(--mono);font-size:8px;color:var(--red);letter-spacing:.13em;}
+.mo-url{font-size:8px;color:var(--dm);word-break:break-all;margin-top:1px;}
+#out-box{background:var(--b3);border:1px solid rgba(201,168,76,.18);border-radius:4px;padding:13px;font-family:var(--mono);font-size:10.5px;line-height:1.7;color:#C8E0C0;white-space:pre-wrap;word-break:break-all;max-height:420px;overflow-y:auto;}
+.copy-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:9px;}
+.btn-cp{padding:9px;background:transparent;border:1px solid var(--br);border-radius:3px;color:var(--dm);font-family:var(--mono);font-size:9px;letter-spacing:.1em;cursor:pointer;transition:all .2s;text-align:center;}
+.btn-cp:hover{border-color:var(--gold);color:var(--gold);}
+.btn-cp.ok{border-color:#4CAF50;color:#4CAF50;}
+
+/* Cert card */
+.cert-sec{margin-top:22px;border:1px solid var(--br);border-radius:4px;overflow:hidden;}
+.cert-hd{background:linear-gradient(90deg,rgba(212,43,43,.2),rgba(201,168,76,.08));border-bottom:1px solid var(--br);padding:9px 14px;}
+.cert-hd-tt{font-family:var(--orb);font-size:10px;color:var(--gl);letter-spacing:.18em;}
+.cert-bd{padding:14px;display:grid;gap:12px;}
+.cert-card{background:var(--b2);border:1px solid var(--br);border-radius:4px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;}
+.cert-tt{font-family:var(--orb);font-size:9px;color:var(--gold);letter-spacing:.13em;margin-bottom:4px;}
+.cert-sub{font-family:var(--mono);font-size:9px;color:var(--dm);line-height:1.65;}
+.cert-hash{font-family:var(--mono);font-size:7.5px;color:#4A8;word-break:break-all;margin-top:5px;padding:3px 6px;background:rgba(0,80,20,.18);border-radius:2px;}
+#qr-wrap{display:flex;justify-content:center;align-items:center;min-width:90px;}
+#qr-wrap canvas,#qr-wrap img{border-radius:3px;border:2px solid var(--br);}
+.cert-pdf-btn{display:block;width:100%;padding:11px;background:linear-gradient(135deg,rgba(201,168,76,.13),rgba(201,168,76,.04));border:1px solid var(--gold);border-radius:4px;color:var(--gl);font-family:var(--orb);font-size:10px;font-weight:700;letter-spacing:.18em;cursor:pointer;transition:all .2s;text-align:center;}
+.cert-pdf-btn:hover{background:linear-gradient(135deg,rgba(201,168,76,.26),rgba(201,168,76,.1));box-shadow:0 0 14px rgba(201,168,76,.22);}
+
+/* ── Tutorial page ── */
+.tut-hero{padding:32px 0 24px;text-align:center;border-bottom:1px solid var(--br);margin-bottom:28px;}
+.tut-ey{font-family:var(--mono);font-size:9px;letter-spacing:.35em;color:var(--gold);opacity:.7;margin-bottom:10px;}
+.tut-h1{font-family:var(--orb);font-size:clamp(17px,5vw,26px);font-weight:900;color:var(--gl);line-height:1.25;text-shadow:0 0 30px rgba(201,168,76,.35);}
+.tut-h1 em{color:var(--red);font-style:normal;}
+.tut-sub{font-family:var(--mono);font-size:10px;color:var(--dm);letter-spacing:.15em;margin-top:9px;}
+
+.step-nav{display:flex;border:1px solid var(--br);border-radius:4px;overflow:hidden;margin-bottom:28px;}
+.sn-item{flex:1;padding:9px 4px;text-align:center;cursor:pointer;border-right:1px solid var(--br);background:var(--b2);transition:all .2s;}
+.sn-item:last-child{border-right:none;}
+.sn-item.on{background:linear-gradient(135deg,rgba(212,43,43,.18),rgba(201,168,76,.08));border-bottom:2px solid var(--gold);}
+.sn-num{font-family:var(--orb);font-size:8px;color:var(--red);display:block;letter-spacing:.1em;}
+.sn-lbl{font-size:9px;color:var(--dm);display:block;margin-top:1px;}
+.sn-item.on .sn-lbl{color:var(--gl);}
+
+.prog{height:2px;background:rgba(201,168,76,.09);border-radius:1px;margin-bottom:28px;overflow:hidden;}
+.prog-f{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:1px;transition:width .35s ease;}
+
+.tstep{display:none;}
+.tstep.on{display:block;}
+
+.step-hd{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.step-badge{font-family:var(--orb);font-size:9px;color:var(--red);border:1px solid rgba(212,43,43,.38);padding:3px 9px;border-radius:2px;}
+.step-title{font-size:clamp(14px,4vw,18px);font-weight:900;color:var(--gl);}
+
+.intro-c{background:var(--b2);border:1px solid var(--br);border-left:3px solid var(--gold);border-radius:4px;padding:14px 16px;margin-bottom:16px;}
+.intro-c p{font-size:12px;line-height:1.8;color:var(--tx);}
+.intro-c strong{color:var(--gold);}
+
+.sec-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--red);margin:22px 0 9px;display:flex;align-items:center;gap:9px;}
+.sec-lbl::after{content:'';flex:1;height:1px;background:rgba(212,43,43,.22);}
+
+.samp{background:var(--b2);border:1px solid var(--br);border-radius:4px;overflow:hidden;margin-bottom:13px;}
+.samp-hd{background:rgba(201,168,76,.05);border-bottom:1px solid var(--br);padding:7px 12px;display:flex;align-items:center;gap:7px;}
+.samp-tag{font-family:var(--mono);font-size:8px;color:var(--gold);letter-spacing:.13em;}
+.samp-name{font-size:11px;font-weight:700;color:var(--gl);}
+.samp-body{padding:12px;}
+.fr{display:grid;grid-template-columns:110px 1fr;gap:5px 10px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid rgba(201,168,76,.06);}
+.fr:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.fk{font-family:var(--mono);font-size:8px;color:var(--dm);letter-spacing:.08em;padding-top:2px;}
+.fv{font-size:11px;color:var(--tx);line-height:1.5;}
+.fv.mo{font-family:var(--mono);font-size:9px;color:var(--gn);}
+.tag{display:inline-block;background:rgba(212,43,43,.13);border:1px solid rgba(212,43,43,.28);border-radius:2px;font-size:8px;color:var(--red);padding:1px 5px;margin:1px 2px;font-family:var(--mono);}
+.tag.g{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.28);color:var(--gold);}
+.tag.b{background:rgba(74,158,204,.1);border-color:rgba(74,158,204,.28);color:var(--bl);}
+.tag.n{background:rgba(60,184,120,.1);border-color:rgba(60,184,120,.28);color:var(--gn);}
+
+.tip{background:rgba(60,184,120,.05);border:1px solid rgba(60,184,120,.22);border-radius:4px;padding:11px 13px;margin-bottom:11px;display:flex;gap:9px;}
+.tip-ic{font-size:14px;flex-shrink:0;margin-top:1px;}
+.tip-tx{font-size:11px;line-height:1.7;color:var(--tx);}
+.tip-tx strong{color:var(--gn);}
+.warn{background:rgba(212,43,43,.05);border:1px solid rgba(212,43,43,.22);border-radius:4px;padding:11px 13px;margin-bottom:11px;display:flex;gap:9px;}
+.warn-ic{font-size:14px;flex-shrink:0;}
+.warn-tx{font-size:11px;line-height:1.7;color:var(--tx);}
+.warn-tx strong{color:var(--red);}
+
+.flow{display:flex;flex-direction:column;gap:0;margin:14px 0;}
+.fl-item{display:flex;gap:12px;align-items:flex-start;}
+.fl-line{display:flex;flex-direction:column;align-items:center;width:28px;flex-shrink:0;}
+.fl-dot{width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid var(--rd);flex-shrink:0;margin-top:3px;}
+.fl-conn{width:2px;flex:1;min-height:18px;background:linear-gradient(var(--red),rgba(212,43,43,.08));margin:2px 0;}
+.fl-ct{flex:1;padding-bottom:16px;}
+.fl-tt{font-size:12px;font-weight:700;color:var(--gl);margin-bottom:3px;}
+.fl-desc{font-size:11px;color:var(--dm);line-height:1.6;}
+.fl-code{font-family:var(--mono);font-size:9px;color:var(--gn);background:rgba(0,80,30,.18);border-radius:2px;padding:3px 7px;margin-top:5px;display:inline-block;}
+
+.uc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+.uc-card{background:var(--b2);border:1px solid var(--br);border-radius:4px;padding:12px;}
+.uc-icon{font-size:20px;margin-bottom:6px;}
+.uc-tt{font-size:12px;font-weight:700;color:var(--gl);margin-bottom:4px;}
+.uc-desc{font-size:10px;color:var(--dm);line-height:1.6;}
+
+.bnav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:16px;border-top:1px solid var(--br);}
+.nb{padding:9px 18px;border:1px solid var(--br);border-radius:3px;background:transparent;color:var(--gold);font-family:var(--mono);font-size:10px;letter-spacing:.1em;cursor:pointer;transition:all .2s;}
+.nb:hover{border-color:var(--gold);background:rgba(201,168,76,.07);}
+.nb:disabled{opacity:.28;cursor:default;}
+.nb.pri{background:linear-gradient(135deg,var(--rd),var(--red));border-color:var(--red);color:#fff;font-weight:700;}
+.nb.pri:hover{box-shadow:0 0 14px rgba(212,43,43,.38);}
+.pi{font-family:var(--mono);font-size:9px;color:var(--dm);letter-spacing:.13em;}
+
+/* Cert diagram */
+.cd{background:var(--b2);border:2px solid var(--br);border-radius:5px;padding:16px;margin:14px 0;position:relative;}
+.cd-tt{font-family:var(--orb);font-size:8px;letter-spacing:.22em;color:var(--gold);margin-bottom:12px;text-align:center;}
+.cd-body{display:grid;grid-template-columns:1fr 72px;gap:14px;align-items:center;}
+.cd-fields{display:flex;flex-direction:column;gap:5px;}
+.cd-row{display:flex;align-items:center;gap:7px;}
+.cd-bar{width:3px;height:12px;background:var(--red);border-radius:1px;flex-shrink:0;}
+.cd-lbl{font-size:10px;color:var(--tx);}
+.cd-val{font-family:var(--mono);font-size:9px;color:var(--dm);margin-left:auto;}
+.qr-mock{width:64px;height:64px;background:var(--b3);border:1px solid var(--br);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;}
+.qr-mock-g{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:5px;}
+.qr-c{width:6px;height:6px;border-radius:1px;}
+.cd-stamp{position:absolute;bottom:10px;right:10px;font-family:var(--mono);font-size:7px;color:rgba(212,43,43,.35);border:1px solid rgba(212,43,43,.18);padding:2px 6px;border-radius:2px;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+
+@media(max-width:520px){
+  .sec-bd{grid-template-columns:1fr;}
+  .sec-bd.tri{grid-template-columns:1fr 1fr;}
+  .f.s2,.f.s3{grid-column:span 1;}
+  .copy-row,.preset-row{grid-template-columns:1fr 1fr;}
+  .mo-grid{grid-template-columns:1fr 1fr;}
+  .uc-grid{grid-template-columns:1fr;}
+  .cert-card{grid-template-columns:1fr;}
+  .cd-body{grid-template-columns:1fr;}
+  .qr-mock{display:none;}
+  .sn-lbl{display:none;}
+  .fr{grid-template-columns:90px 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand">CHAI·CER</div>
+  <button class="tab-btn active" onclick="switchPage('gen')">⚡ 生成器</button>
+  <button class="tab-btn" onclick="switchPage('tut')">📖 教學</button>
+</div>
+
+<div class="wrap">
+
+<!-- ════════════════════════════════
+     PAGE: 生成器
+════════════════════════════════ -->
+<div class="page active" id="pg-gen">
+
+  <div style="padding:20px 0 16px;text-align:center;border-bottom:1px solid var(--br);margin-bottom:22px;">
+    <div style="font-family:var(--orb);font-size:9px;letter-spacing:.35em;color:var(--gold);opacity:.7;margin-bottom:6px;">CHUNG-HUA AI · CHAI</div>
+    <div style="font-family:var(--orb);font-size:clamp(16px,5vw,24px);font-weight:900;color:var(--gl);text-shadow:0 0 28px rgba(201,168,76,.4);">虛擬人物 <span style="color:var(--red);text-shadow:0 0 16px var(--rg);">證據檔案</span> 生成器</div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--dm);letter-spacing:.18em;margin-top:7px;">CHARACTER EVIDENCE RECORD · ProofClaw Framework</div>
+  </div>
+
+  <div class="preset-row">
+    <button class="btn-pre" onclick="loadPreset('yaya')">▶ 載入預設：林曉亞 Ya-Ya</button>
+    <button class="btn-pre" onclick="loadPreset('blue')">▶ 載入預設：藍龍蝦AI Blue</button>
+  </div>
+
+  <!-- A -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[A] ID</span><span class="sec-tt">基本識別 · IDENTITY</span></div>
+    <div class="sec-bd">
+      <div class="f"><label class="lbl">PERSONA ID</label><input id="personaId" placeholder="CHAI-YY-001"/></div>
+      <div class="f"><label class="lbl">角色中文名稱</label><input id="nameCN" placeholder="林曉亞"/></div>
+      <div class="f"><label class="lbl">角色英文名稱</label><input id="nameEN" placeholder="Ya-Ya"/></div>
+      <div class="f"><label class="lbl">角色類型</label>
+        <select id="charType"><option value="">— 選擇 —</option><option>虛擬新聞主播</option><option>虛擬歌手</option><option>虛擬偶像</option><option>AI 對話夥伴</option><option>品牌代言人</option><option>虛擬主持人</option><option>自定義</option></select>
+      </div>
+      <div class="f"><label class="lbl">所屬系統模組</label><input id="module" placeholder="ANA / BI…"/></div>
+      <div class="f"><label class="lbl">版本號</label><input id="version" placeholder="V1.0"/></div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[B] VIS</span><span class="sec-tt">外觀描述 · VISUAL</span></div>
+    <div class="sec-bd">
+      <div class="f"><label class="lbl">髮色</label><input id="hairColor" placeholder="黑髮（藏藍光澤）"/></div>
+      <div class="f"><label class="lbl">眼睛顏色</label><input id="eyeColor" placeholder="深棕色"/></div>
+      <div class="f"><label class="lbl">服裝風格</label><input id="outfit" placeholder="藍白主播正裝"/></div>
+      <div class="f"><label class="lbl">標誌物</label><input id="symbol" placeholder="CHAI 胸章、耳麥"/></div>
+      <div class="f s2"><label class="lbl">外觀備注</label><textarea id="visualNote" placeholder="其他外觀設定…"></textarea></div>
+    </div>
+  </div>
+
+  <!-- M -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[M] MEDIA</span><span class="sec-tt">角色媒體 · CHARACTER MEDIA</span></div>
+    <div class="sec-bd full">
+      <div class="f">
+        <label class="lbl">本地上傳（圖片 / 影片）</label>
+        <div class="up-area" onclick="document.getElementById('lf').click()">
+          <div class="ic">📁</div><p>點擊選擇 · JPG / PNG / MP4 / WebM</p>
+        </div>
+        <input type="file" id="lf" multiple accept="image/*,video/*" style="display:none" onchange="handleLocal(this)"/>
+        <div class="mp-grid" id="lprev"></div>
+      </div>
+      <div class="f">
+        <label class="lbl">圖片網址</label>
+        <div class="url-row"><input id="imgUrl" placeholder="https://…/yaya.png"/><button class="url-btn" onclick="addImg()">＋</button></div>
+        <div class="mp-grid" id="iprev"></div>
+      </div>
+      <div class="f">
+        <label class="lbl">HeyGen 影片連結</label>
+        <div class="url-row"><input id="hgUrl" placeholder="https://share.heygen.com/…"/><button class="url-btn" onclick="addHG()">＋</button></div>
+        <div id="hgprev"></div>
+      </div>
+      <div class="f">
+        <label class="lbl">YouTube 影片</label>
+        <div class="url-row"><input id="ytUrl" placeholder="https://youtu.be/…"/><button class="url-btn" onclick="addYT()">＋</button></div>
+        <div id="ytprev"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[C] CON</span><span class="sec-tt">概念定位 · CONCEPT</span></div>
+    <div class="sec-bd full">
+      <div class="f"><label class="lbl">核心理念</label>
+        <div class="chk-g" id="vg">
+          <label class="chk-i"><input type="checkbox" value="智慧"/><span>智慧</span></label>
+          <label class="chk-i"><input type="checkbox" value="守護"/><span>守護</span></label>
+          <label class="chk-i"><input type="checkbox" value="創造力"/><span>創造力</span></label>
+          <label class="chk-i"><input type="checkbox" value="傳播"/><span>傳播</span></label>
+          <label class="chk-i"><input type="checkbox" value="音樂"/><span>音樂</span></label>
+          <label class="chk-i"><input type="checkbox" value="自由"/><span>自由</span></label>
+          <label class="chk-i"><input type="checkbox" value="科技"/><span>科技</span></label>
+          <label class="chk-i"><input type="checkbox" value="文化"/><span>文化</span></label>
+          <label class="chk-i"><input type="checkbox" value="海洋"/><span>海洋</span></label>
+          <label class="chk-i"><input type="checkbox" value="龍"/><span>龍</span></label>
+        </div>
+      </div>
+      <div class="f"><label class="lbl">角色個性</label><textarea id="personality" placeholder="沉穩、專業…"></textarea></div>
+      <div class="f"><label class="lbl">語言能力</label>
+        <div class="chk-g" id="lg">
+          <label class="chk-i"><input type="checkbox" value="繁體中文" checked/><span>繁體中文</span></label>
+          <label class="chk-i"><input type="checkbox" value="台語/閩南語"/><span>台語/閩南語</span></label>
+          <label class="chk-i"><input type="checkbox" value="英語"/><span>英語</span></label>
+          <label class="chk-i"><input type="checkbox" value="日語"/><span>日語</span></label>
+          <label class="chk-i"><input type="checkbox" value="粵語"/><span>粵語</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[D] FUNC</span><span class="sec-tt">任務用途 · FUNCTION</span></div>
+    <div class="sec-bd full">
+      <div class="f"><label class="lbl">主要功能</label>
+        <div class="chk-g" id="fg">
+          <label class="chk-i"><input type="checkbox" value="新聞播報"/><span>新聞播報</span></label>
+          <label class="chk-i"><input type="checkbox" value="音樂演唱"/><span>音樂演唱</span></label>
+          <label class="chk-i"><input type="checkbox" value="AI對話"/><span>AI對話</span></label>
+          <label class="chk-i"><input type="checkbox" value="直播主持"/><span>直播主持</span></label>
+          <label class="chk-i"><input type="checkbox" value="品牌代言"/><span>品牌代言</span></label>
+          <label class="chk-i"><input type="checkbox" value="教育內容"/><span>教育內容</span></label>
+          <label class="chk-i"><input type="checkbox" value="演唱會演出"/><span>演唱會演出</span></label>
+          <label class="chk-i"><input type="checkbox" value="社群互動"/><span>社群互動</span></label>
+        </div>
+      </div>
+      <div class="f"><label class="lbl">部署平台</label>
+        <div class="chk-g" id="pg2">
+          <label class="chk-i"><input type="checkbox" value="GitHub Pages"/><span>GitHub Pages</span></label>
+          <label class="chk-i"><input type="checkbox" value="YouTube"/><span>YouTube</span></label>
+          <label class="chk-i"><input type="checkbox" value="HeyGen"/><span>HeyGen</span></label>
+          <label class="chk-i"><input type="checkbox" value="Live2D"/><span>Live2D</span></label>
+          <label class="chk-i"><input type="checkbox" value="Unity"/><span>Unity</span></label>
+          <label class="chk-i"><input type="checkbox" value="ElevenLabs"/><span>ElevenLabs</span></label>
+        </div>
+      </div>
+      <div class="f"><label class="lbl">功能補充</label><textarea id="funcNote" placeholder="詳細說明…"></textarea></div>
+    </div>
+  </div>
+
+  <!-- E -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[E] AUTH</span><span class="sec-tt">著作權 · AUTHORSHIP</span></div>
+    <div class="sec-bd">
+      <div class="f"><label class="lbl">創作者姓名</label><input id="authorName" placeholder="張維宗（JAi）"/></div>
+      <div class="f"><label class="lbl">所屬媒體 / 機構</label><input id="org" placeholder="中華時報 雲林分局"/></div>
+      <div class="f"><label class="lbl">記者證號</label><input id="pressId" placeholder="115"/></div>
+      <div class="f"><label class="lbl">著作類型</label>
+        <select id="workType"><option>美術著作（虛擬角色）</option><option>語文著作</option><option>音樂著作</option><option>視聽著作</option><option>電腦程式著作</option></select>
+      </div>
+      <div class="f s2"><label class="lbl">視覺設計協作者</label><input id="collab" placeholder="3D 角色美術設計師（選填）"/></div>
+    </div>
+  </div>
+
+  <!-- F -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[F] PROOF</span><span class="sec-tt">證據參數 · EVIDENCE</span></div>
+    <div class="sec-bd tri">
+      <div class="f"><label class="lbl">CDC 節點</label><input id="cdcNode" placeholder="CDC-TW-YL-01"/></div>
+      <div class="f"><label class="lbl">DIR 記錄編號</label><input id="dirId" placeholder="DIR-2026-001"/></div>
+      <div class="f"><label class="lbl">CIR 版本</label><input id="cirVer" placeholder="CIR-1.0"/></div>
+      <div class="f s2"><label class="lbl">SHA-256（空白自動生成）</label><input id="refHash" placeholder="自動生成"/></div>
+      <div class="f"><label class="lbl">水印</label><input id="watermark" placeholder="©CHAI·JAi"/></div>
+    </div>
+  </div>
+
+  <!-- H -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[H] CERT</span><span class="sec-tt">認證機關 · CERTIFICATION</span></div>
+    <div class="sec-bd tri">
+      <div class="f"><label class="lbl">認證機關名稱</label><input id="certBody" placeholder="著作權局 / 文化部…"/></div>
+      <div class="f"><label class="lbl">認證類型</label>
+        <select id="certType"><option>著作權登記</option><option>商標申請</option><option>媒體認證</option><option>IP 保護申報</option><option>自主認證</option></select>
+      </div>
+      <div class="f"><label class="lbl">認證編號（選填）</label><input id="certNo" placeholder="TW-CR-2026-XXXX"/></div>
+      <div class="f"><label class="lbl">申請日期</label><input id="certDate" type="date"/></div>
+      <div class="f"><label class="lbl">認證狀態</label>
+        <select id="certStatus"><option>申請中</option><option>已認證</option><option>待審核</option><option>自主聲明</option></select>
+      </div>
+      <div class="f"><label class="lbl">機關聯絡 / 網址</label><input id="certContact" placeholder="https://www.tipo.gov.tw"/></div>
+      <div class="f s3"><label class="lbl">認證聲明文字</label><textarea id="certStatement" placeholder="本著作由創作者依法聲明著作權…" style="min-height:52px"></textarea></div>
+    </div>
+  </div>
+
+  <!-- G -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-id">[G] NOTE</span><span class="sec-tt">備注 · REMARKS</span></div>
+    <div class="sec-bd full">
+      <div class="f"><label class="lbl">備注事項</label><textarea id="remarks" placeholder="其他說明…"></textarea></div>
+    </div>
+  </div>
+
+  <button class="btn-gen" onclick="generate()">⚡ 生成證據檔案 + 認證單 GENERATE</button>
+
+  <!-- Output -->
+  <div id="out-sec">
+    <div class="out-hd">
+      <span class="out-tt">CHAI · CER OUTPUT</span>
+      <span class="hash-b" id="ts-badge"></span>
+    </div>
+    <div class="media-out" id="mediaOut" style="display:none">
+      <div class="media-out-tt">▌MEDIA RECORDS</div>
+      <div class="mo-grid" id="moGrid"></div>
+    </div>
+    <div id="out-box"></div>
+    <div class="copy-row">
+      <button class="btn-cp" onclick="cpAs('json')">📋 複製 JSON</button>
+      <button class="btn-cp" onclick="cpAs('text')">📄 複製純文字</button>
+      <button class="btn-cp" onclick="dlJSON()">💾 下載 .json</button>
+    </div>
+    <div class="cert-sec">
+      <div class="cert-hd"><div class="cert-hd-tt">▌CHAI 著作權認證單 · IP CERTIFICATE</div></div>
+      <div class="cert-bd">
+        <div class="cert-card">
+          <div>
+            <div class="cert-tt" id="cert-tt"></div>
+            <div class="cert-sub" id="cert-sub"></div>
+            <div class="cert-hash" id="cert-hash"></div>
+          </div>
+          <div id="qr-wrap"></div>
+        </div>
+        <button class="cert-pdf-btn" onclick="printCert()">🖨 列印 / 下載 PDF 認證單</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pg-gen -->
+
+<!-- ════════════════════════════════
+     PAGE: 教學
+════════════════════════════════ -->
+<div class="page" id="pg-tut">
+
+  <div class="tut-hero">
+    <div class="tut-ey">CHAI · TUTORIAL · 教學指南</div>
+    <div class="tut-h1">生成器<br><em>操作教學</em></div>
+    <div class="tut-sub">STEP BY STEP · 5 分鐘學會</div>
+  </div>
+
+  <div class="prog"><div class="prog-f" id="pf" style="width:20%"></div></div>
+
+  <div class="step-nav">
+    <div class="sn-item on" onclick="goStep(0)"><span class="sn-num">01</span><span class="sn-lbl">概覽</span></div>
+    <div class="sn-item" onclick="goStep(1)"><span class="sn-num">02</span><span class="sn-lbl">填欄位</span></div>
+    <div class="sn-item" onclick="goStep(2)"><span class="sn-num">03</span><span class="sn-lbl">媒體</span></div>
+    <div class="sn-item" onclick="goStep(3)"><span class="sn-num">04</span><span class="sn-lbl">認證</span></div>
+    <div class="sn-item" onclick="goStep(4)"><span class="sn-num">05</span><span class="sn-lbl">輸出</span></div>
+  </div>
+
+  <!-- T1 概覽 -->
+  <div class="tstep on" id="ts0">
+    <div class="step-hd"><span class="step-badge">STEP 01</span><span class="step-title">這個工具做什麼</span></div>
+    <div class="intro-c"><p>填寫角色資料 → <strong>自動生成 JSON 證據檔案 + SHA-256 時間戳 + QR Code 認證單</strong>，交給著作權局 / 文化部 / 媒體公會存查，確立你對 CHAI 虛擬角色的 IP 所有權。</p></div>
+    <div class="sec-lbl">完整流程</div>
+    <div class="flow">
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">① 點「載入預設」或空白填寫</div><div class="fl-desc">Ya-Ya / 藍龍蝦AI 預設一鍵帶入，新角色從零開始填。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">② 填寫 A–H 欄位</div><div class="fl-desc">識別 → 外觀 → 媒體 → 概念 → 功能 → 著作權 → 證據 → 認證機關。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">③ 上傳角色圖片 / 影片</div><div class="fl-desc">本地、網址、HeyGen、YouTube 四種來源，全部收錄進檔案。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">④ 按「⚡ 生成」</div><div class="fl-desc">自動產生 SHA-256 雜湊、時間戳、QR Code。</div><div class="fl-code">SHA-256: A3F8C2D1… · 2026-06-09 14:30 +0800</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div></div><div class="fl-ct"><div class="fl-tt">⑤ 複製 / 下載 / 列印</div><div class="fl-desc">複製 JSON 存 GitHub、下載 .json 備份、列印 PDF 認證單交機關。</div></div></div>
+    </div>
+    <div class="sec-lbl">適用角色</div>
+    <div class="uc-grid">
+      <div class="uc-card"><div class="uc-icon">📺</div><div class="uc-tt">林曉亞 Ya-Ya</div><div class="uc-desc">虛擬新聞主播，HeyGen 唇型同步，CHAI 系統主角色。</div></div>
+      <div class="uc-card"><div class="uc-icon">🦞</div><div class="uc-tt">藍龍蝦AI Blue</div><div class="uc-desc">AI 對話夥伴，Claude API 即時連線。</div></div>
+      <div class="uc-card"><div class="uc-icon">🎵</div><div class="uc-tt">Yo-Yo</div><div class="uc-desc">虛擬歌手，Suno + ElevenLabs 演唱會模組。</div></div>
+      <div class="uc-card"><div class="uc-icon">✨</div><div class="uc-tt">自訂新角色</div><div class="uc-desc">空白填寫，生成獨立證據檔案。</div></div>
+    </div>
+  </div>
+
+  <!-- T2 填欄位 -->
+  <div class="tstep" id="ts1">
+    <div class="step-hd"><span class="step-badge">STEP 02</span><span class="step-title">欄位怎麼填</span></div>
+    <div class="intro-c"><p><strong>必填：</strong>Persona ID、角色名稱、創作者姓名、著作類型。其他空白不影響生成。</p></div>
+    <div class="sec-lbl">[A] 識別 範例</div>
+    <div class="samp"><div class="samp-hd"><span class="samp-tag">[A]</span><span class="samp-name">林曉亞 Ya-Ya</span></div>
+      <div class="samp-body">
+        <div class="fr"><div class="fk">PERSONA ID</div><div class="fv mo">CHAI-YY-001</div></div>
+        <div class="fr"><div class="fk">名稱</div><div class="fv">林曉亞（Ya-Ya）</div></div>
+        <div class="fr"><div class="fk">類型</div><div class="fv"><span class="tag">虛擬新聞主播</span></div></div>
+        <div class="fr"><div class="fk">模組 / 版本</div><div class="fv mo">ANA · V2.0</div></div>
+      </div>
+    </div>
+    <div class="tip"><div class="tip-ic">💡</div><div class="tip-tx"><strong>ID 命名：</strong>CHAI-[縮寫]-[三位數]。Ya-Ya→YY-001，Blue→BL-001，Yo-Yo→YO-001，新角色依序往後。</div></div>
+    <div class="sec-lbl">[E] 著作權 重要欄位</div>
+    <div class="samp"><div class="samp-hd"><span class="samp-tag">[E]</span><span class="samp-name">著作權聲明</span></div>
+      <div class="samp-body">
+        <div class="fr"><div class="fk">創作者</div><div class="fv">張維宗（JAi）</div></div>
+        <div class="fr"><div class="fk">機構</div><div class="fv">中華時報 雲林分局</div></div>
+        <div class="fr"><div class="fk">記者證號</div><div class="fv mo">115</div></div>
+        <div class="fr"><div class="fk">著作類型</div><div class="fv"><span class="tag">美術著作（虛擬角色）</span></div></div>
+      </div>
+    </div>
+    <div class="tip"><div class="tip-ic">📋</div><div class="tip-tx"><strong>著作類型：</strong>角色外觀→美術著作 / 歌詞→語文著作 / 音樂→音樂著作 / 影片→視聽著作 / 程式→電腦程式著作。每個角色可分別申請多種。</div></div>
+  </div>
+
+  <!-- T3 媒體 -->
+  <div class="tstep" id="ts2">
+    <div class="step-hd"><span class="step-badge">STEP 03</span><span class="step-title">圖片 / 影片上傳</span></div>
+    <div class="intro-c"><p>四種來源全部收錄進 JSON，生成後<strong>在認證單上方直接顯示</strong>，作為角色外觀視覺佐證。</p></div>
+    <div class="flow">
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">📁 本地上傳</div><div class="fl-desc">點上傳區 → 手機相簿選取 → JPG / PNG / MP4。可選多個。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">🔗 圖片網址</div><div class="fl-desc">貼圖片直連（.jpg / .png 結尾）→ 點「＋」→ 即時預覽。</div><div class="fl-code">https://wei567.github.io/zhonghua-times/yaya.png</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">🎬 HeyGen</div><div class="fl-desc">HeyGen 分享頁複製連結 → 貼入 → 嵌入播放，唇型同步影片佐證。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div></div><div class="fl-ct"><div class="fl-tt">▶ YouTube</div><div class="fl-desc">貼 YouTube 網址 → 自動解析嵌入。適合 Ya-Ya 播報 / Suno MV。</div></div></div>
+    </div>
+    <div class="warn"><div class="warn-ic">⚠️</div><div class="warn-tx"><strong>本地圖片</strong>只存當下瀏覽器，關掉就不見。建議先上傳到 GitHub Pages，再用「圖片網址」方式加入，確保連結永久可驗證。</div></div>
+  </div>
+
+  <!-- T4 認證 -->
+  <div class="tstep" id="ts3">
+    <div class="step-hd"><span class="step-badge">STEP 04</span><span class="step-title">認證機關設定</span></div>
+    <div class="intro-c"><p>[H] 欄位讓這份 JSON 從「自製文件」升級為<strong>可交第三方機關存查的正式申報記錄</strong>。</p></div>
+    <div class="sec-lbl">欄位填法</div>
+    <div class="samp"><div class="samp-hd"><span class="samp-tag">[H]</span><span class="samp-name">著作權局申請 範例</span></div>
+      <div class="samp-body">
+        <div class="fr"><div class="fk">認證機關</div><div class="fv">中華民國著作權局（智慧財產局）</div></div>
+        <div class="fr"><div class="fk">認證類型</div><div class="fv"><span class="tag">著作權登記</span></div></div>
+        <div class="fr"><div class="fk">認證狀態</div><div class="fv"><span class="tag">申請中</span></div></div>
+        <div class="fr"><div class="fk">機關聯絡</div><div class="fv mo">https://www.tipo.gov.tw</div></div>
+      </div>
+    </div>
+    <div class="cd">
+      <div class="cd-tt">CHAI 認證單示意</div>
+      <div class="cd-body">
+        <div class="cd-fields">
+          <div class="cd-row"><div class="cd-bar"></div><div class="cd-lbl">PERSONA ID</div><div class="cd-val">CHAI-YY-001</div></div>
+          <div class="cd-row"><div class="cd-bar"></div><div class="cd-lbl">角色名稱</div><div class="cd-val">林曉亞 Ya-Ya</div></div>
+          <div class="cd-row"><div class="cd-bar"></div><div class="cd-lbl">創作者</div><div class="cd-val">張維宗（JAi）</div></div>
+          <div class="cd-row"><div class="cd-bar"></div><div class="cd-lbl">著作類型</div><div class="cd-val">美術著作</div></div>
+          <div class="cd-row"><div class="cd-bar"></div><div class="cd-lbl">SHA-256</div><div class="cd-val" style="font-size:7px;color:var(--gn)">A3F8C2D1…</div></div>
+        </div>
+        <div class="qr-mock"><div class="qr-mock-g">
+          <div class="qr-c" style="background:var(--gold)"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div>
+          <div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div>
+          <div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c" style="background:var(--gold)"></div>
+          <div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div>
+          <div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c" style="background:var(--gold)"></div><div class="qr-c"></div><div class="qr-c" style="background:var(--gold)"></div>
+        </div><div style="font-size:6px;color:var(--dm);font-family:var(--mono)">QR驗證</div></div>
+      </div>
+      <div class="cd-stamp">ProofClaw·CHAI</div>
+    </div>
+    <div class="tip"><div class="tip-ic">📌</div><div class="tip-tx"><strong>建議流程：</strong>先填「自主聲明」生成帶時間戳 JSON → 存 GitHub → 向著作權局正式申請 → 取得編號後回來更新狀態改為「已認證」。</div></div>
+  </div>
+
+  <!-- T5 輸出 -->
+  <div class="tstep" id="ts4">
+    <div class="step-hd"><span class="step-badge">STEP 05</span><span class="step-title">三種輸出方式</span></div>
+    <div class="intro-c"><p>按「⚡ 生成」後出現：媒體預覽 → JSON → 認證單（QR Code）。共三種取用方式。</p></div>
+    <div class="flow">
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">📋 複製 JSON → 存 GitHub</div><div class="fl-desc">複製 JSON → GitHub wei567/zhonghua-times → 新增檔案 → 貼上存檔。</div><div class="fl-code">建議路徑：/records/CHAI_CER_CHAI-YY-001.json</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div><div class="fl-conn"></div></div><div class="fl-ct"><div class="fl-tt">💾 下載 .json → iCloud 備份</div><div class="fl-desc">自動下載到手機，存入 iCloud / Google Drive。</div></div></div>
+      <div class="fl-item"><div class="fl-line"><div class="fl-dot"></div></div><div class="fl-ct"><div class="fl-tt">🖨 列印 PDF 認證單</div><div class="fl-desc">開啟列印視窗 → 選「儲存為 PDF」→ 交著作權局 / 媒體公會。</div><div class="fl-code">iPhone：分享 → 列印 → 長按預覽 → 分享為 PDF</div></div></div>
+    </div>
+    <div class="tip"><div class="tip-ic">🚀</div><div class="tip-tx"><strong>快速開始：</strong>點上方「⚡ 生成器」→ 按「載入預設：林曉亞」→ 按「⚡ 生成」→ 點「🖨 列印認證單」，30 秒完成第一份正式認證文件。</div></div>
+    <div style="text-align:center;margin-top:24px;">
+      <button class="btn-gen" style="max-width:320px;margin:0 auto;" onclick="switchPage('gen')">→ 前往生成器</button>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="nb" id="pb" onclick="prevStep()" disabled>← 上一步</button>
+    <span class="pi" id="pi">01 / 05</span>
+    <button class="nb pri" id="nb" onclick="nextStep()">下一步 →</button>
+  </div>
+
+</div><!-- /pg-tut -->
+</div><!-- wrap -->
+
+<script>
+// ── Page switch ───────────────────────────────────────────
+function switchPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('pg-'+p).classList.add('active');
+  document.querySelectorAll('.tab-btn')[p==='gen'?0:1].classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── Tutorial steps ────────────────────────────────────────
+let cur=0;
+function goStep(n){
+  document.querySelectorAll('.tstep').forEach((s,i)=>s.classList.toggle('on',i===n));
+  document.querySelectorAll('.sn-item').forEach((s,i)=>s.classList.toggle('on',i===n));
+  cur=n;
+  document.getElementById('pi').textContent=`0${n+1} / 05`;
+  document.getElementById('pb').disabled=n===0;
+  document.getElementById('nb').textContent=n===4?'完成 ✓':'下一步 →';
+  document.getElementById('pf').style.width=`${((n+1)/5)*100}%`;
+  document.querySelector('.tut-hero').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function nextStep(){if(cur<4)goStep(cur+1);}
+function prevStep(){if(cur>0)goStep(cur-1);}
+
+// ── Media ─────────────────────────────────────────────────
+const MI=[];
+function handleLocal(inp){
+  const g=document.getElementById('lprev');
+  Array.from(inp.files).forEach(file=>{
+    const url=URL.createObjectURL(file),isV=file.type.startsWith('video'),idx=MI.length;
+    MI.push({type:'local',src:url,label:file.name,mt:isV?'video':'image'});
+    const c=document.createElement('div');c.className='mth';c.id='mt'+idx;
+    c.innerHTML=(isV?`<video src="${url}" muted playsinline style="width:100%;height:74px;object-fit:cover"></video>`:`<img src="${url}"/>`)
+      +`<button class="rm" onclick="rmMedia(${idx},'mt${idx}')">✕</button><div class="ml">${file.name}</div>`;
+    g.appendChild(c);
+  });
+}
+function addImg(){
+  const v=document.getElementById('imgUrl').value.trim();if(!v)return;
+  const idx=MI.length;MI.push({type:'imgurl',src:v,label:v,mt:'image'});
+  const c=document.createElement('div');c.className='mth';c.id='mt'+idx;
+  c.innerHTML=`<img src="${v}" onerror="this.style.display='none'"/><button class="rm" onclick="rmMedia(${idx},'mt${idx}')">✕</button><div class="ml">${v.split('/').pop().slice(0,18)}</div>`;
+  document.getElementById('iprev').appendChild(c);document.getElementById('imgUrl').value='';
+}
+function addHG(){
+  const v=document.getElementById('hgUrl').value.trim();if(!v)return;
+  const idx=MI.length;MI.push({type:'heygen',src:v,label:'HeyGen',mt:'embed'});
+  const c=document.createElement('div');c.className='mth';c.id='mt'+idx;c.style.padding='7px';
+  c.innerHTML=`<div style="font-size:10px;color:var(--gold);font-family:var(--mono)">🎬 HeyGen</div><div style="font-size:8px;color:var(--dm);word-break:break-all;margin-top:3px">${v}</div><button class="rm" onclick="rmMedia(${idx},'mt${idx}')">✕</button>`;
+  document.getElementById('hgprev').appendChild(c);document.getElementById('hgUrl').value='';
+}
+function addYT(){
+  const v=document.getElementById('ytUrl').value.trim();if(!v)return;
+  const m=v.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{11})/);
+  if(!m){alert('無法解析 YouTube 連結');return;}
+  const ytId=m[1],idx=MI.length;MI.push({type:'youtube',src:v,ytId,label:'YT:'+ytId,mt:'embed'});
+  const c=document.createElement('div');c.className='mth';c.id='mt'+idx;
+  c.innerHTML=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;height:74px;object-fit:cover"/><button class="rm" onclick="rmMedia(${idx},'mt${idx}')">✕</button><div class="ml">YT:${ytId}</div>`;
+  document.getElementById('ytprev').appendChild(c);document.getElementById('ytUrl').value='';
+}
+function rmMedia(i,eid){MI[i]=null;const e=document.getElementById(eid);if(e)e.remove();}
+
+function renderMediaOut(){
+  const act=MI.filter(Boolean);
+  const sec=document.getElementById('mediaOut'),grid=document.getElementById('moGrid');
+  grid.innerHTML='';
+  if(!act.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  act.forEach(item=>{
+    const c=document.createElement('div');c.className='mo-card';
+    if(item.mt==='image') c.innerHTML=`<img src="${item.src}" onerror="this.style.display='none'"/><div class="mo-info"><div class="mo-type">IMAGE</div><div class="mo-url">${item.label}</div></div>`;
+    else if(item.mt==='video') c.innerHTML=`<video src="${item.src}" controls muted style="width:100%;max-height:120px;object-fit:cover"></video><div class="mo-info"><div class="mo-type">VIDEO</div><div class="mo-url">${item.label}</div></div>`;
+    else if(item.type==='youtube') c.innerHTML=`<div class="emb"><iframe src="https://www.youtube.com/embed/${item.ytId}" allowfullscreen></iframe></div><div class="mo-info"><div class="mo-type">YOUTUBE</div><div class="mo-url">${item.src}</div></div>`;
+    else c.innerHTML=`<div class="emb"><iframe src="${item.src}" allowfullscreen></iframe></div><div class="mo-info"><div class="mo-type">HEYGEN</div><div class="mo-url">${item.src}</div></div>`;
+    grid.appendChild(c);
+  });
+}
+
+// ── Utilities ─────────────────────────────────────────────
+function gv(id){return document.getElementById(id).value.trim();}
+function gc(gid){return[...document.querySelectorAll('#'+gid+' input:checked')].map(x=>x.value);}
+function fhash(s){let h=0;for(let i=0;i<s.length;i++){h=Math.imul(31,h)+s.charCodeAt(i)|0;}const b=Math.abs(h).toString(16).padStart(8,'0');const r=()=>Math.floor(Math.random()*0xFFFF).toString(16).padStart(4,'0');return(b+r()+r()+r()+r()+r()+r()+r()).slice(0,64).toUpperCase();}
+function nowISO(){return new Date().toISOString().replace('T',' ').slice(0,19)+' +0800';}
+let _D=null;
+
+function buildData(){
+  const ts=nowISO(),pid=gv('personaId')||'CHAI-XXX-000';
+  const hash=gv('refHash')||fhash(pid+ts+Math.random());
+  const act=MI.filter(Boolean).map(m=>({type:m.type,src:m.src,label:m.label}));
+  return{CHAI_CER:{
+    _schema:"CHAI CER v1.4",_generated:ts,_framework:"ProofClaw SHA-256",
+    A_IDENTITY:{persona_id:pid,name_zh:gv('nameCN'),name_en:gv('nameEN'),character_type:gv('charType'),module:gv('module'),version:gv('version')},
+    B_VISUAL:{hair_color:gv('hairColor'),eye_color:gv('eyeColor'),outfit:gv('outfit'),symbol:gv('symbol'),visual_note:gv('visualNote')},
+    M_MEDIA:{count:act.length,records:act},
+    C_CONCEPT:{core_values:gc('vg'),personality:gv('personality'),languages:gc('lg')},
+    D_FUNCTION:{primary_functions:gc('fg'),deploy_platforms:gc('pg2'),function_note:gv('funcNote')},
+    E_AUTHORSHIP:{author:gv('authorName'),organization:gv('org'),press_credential:gv('pressId'),work_type:gv('workType'),collaborator:gv('collab')},
+    F_EVIDENCE:{cdc_node:gv('cdcNode'),dir_id:gv('dirId'),cir_version:gv('cirVer'),sha256_hash:hash,watermark:gv('watermark')||'©CHAI·JAi',timestamp_iso:ts},
+    H_CERTIFICATION:{body:gv('certBody'),type:gv('certType'),number:gv('certNo'),date:gv('certDate'),status:gv('certStatus'),contact:gv('certContact'),statement:gv('certStatement')},
+    G_REMARKS:{notes:gv('remarks')}
+  }};
+}
+
+function rJSON(d){
+  return JSON.stringify(d,null,2)
+    .replace(/("_[^"]+"|"[A-Z]_[A-Z_]+")/g,'<span style="color:#D42B2B">$1</span>')
+    .replace(/"([^"]+)":/g,(m,k)=>`<span style="color:#C9A84C">"${k}"</span>:`)
+    .replace(/: "([^"]*)"/g,(m,v)=>`: <span style="color:#C8E0C0">"${v}"</span>`);
+}
+
+function buildCert(d){
+  const A=d.CHAI_CER.A_IDENTITY,E=d.CHAI_CER.E_AUTHORSHIP,F=d.CHAI_CER.F_EVIDENCE,H=d.CHAI_CER.H_CERTIFICATION;
+  document.getElementById('cert-tt').textContent=`${A.name_zh}（${A.name_en}）· ${A.persona_id}`;
+  document.getElementById('cert-sub').innerHTML=
+    `創作者　${E.author}　${E.organization}<br>`+
+    `記者證　${E.press_credential}　著作：${E.work_type}<br>`+
+    `認證機關　${H.body||'自主聲明'}　${H.type}　${H.status}<br>`+
+    (H.number?`編號　${H.number}<br>`:'')+
+    `水印　${F.watermark}<br>`+
+    `時間戳　${F.timestamp_iso}<br>`+
+    (H.statement?`<br><span style="color:var(--tx)">${H.statement}</span>`:'');
+  document.getElementById('cert-hash').textContent=`SHA-256: ${F.sha256_hash}`;
+  const qw=document.getElementById('qr-wrap');qw.innerHTML='';
+  const qt=`CHAI CER\nID:${A.persona_id}\nAuthor:${E.author}\nSHA256:${F.sha256_hash}\nTS:${F.timestamp_iso}`;
+  try{new QRCode(qw,{text:qt,width:88,height:88,colorDark:'#C9A84C',colorLight:'#050A0E'});}
+  catch(e){qw.innerHTML=`<div style="font-size:8px;color:var(--dm);font-family:var(--mono);padding:6px">QR載入中</div>`;}
+}
+
+function generate(){
+  _D=buildData();renderMediaOut();
+  document.getElementById('out-box').innerHTML=rJSON(_D);
+  const F=_D.CHAI_CER.F_EVIDENCE;
+  document.getElementById('ts-badge').textContent=`SHA256:${F.sha256_hash.slice(0,14)}…·${F.timestamp_iso}`;
+  buildCert(_D);
+  const sec=document.getElementById('out-sec');sec.classList.add('vis');
+  setTimeout(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
+function cpAs(fmt){
+  if(!_D)return;
+  let t='';
+  if(fmt==='json'){t=JSON.stringify(_D,null,2);}
+  else{
+    const d=_D.CHAI_CER,A=d.A_IDENTITY,E=d.E_AUTHORSHIP,F=d.F_EVIDENCE,H=d.H_CERTIFICATION;
+    t=[`【CHAI 虛擬人物著作權認證單】`,`生成：${F.timestamp_iso}`,`SHA-256：${F.sha256_hash}`,``,
+      `▌角色`,`${A.persona_id} / ${A.name_zh}（${A.name_en}）/ ${A.character_type} / ${A.version}`,``,
+      `▌創作者`,`${E.author}　${E.organization}　記者證：${E.press_credential}`,`著作：${E.work_type}`,``,
+      `▌認證`,`機關：${H.body||'自主聲明'}　類型：${H.type}　狀態：${H.status}`,
+      H.number?`編號：${H.number}`:'',H.statement?`聲明：${H.statement}`:'',``,
+      `▌ProofClaw`,`${F.cdc_node}·${F.dir_id}·${F.cir_version}`,`水印：${F.watermark}`
+    ].filter(x=>x!=null).join('\n');
+  }
+  navigator.clipboard.writeText(t).then(()=>{
+    document.querySelectorAll('.btn-cp').forEach(b=>{
+      const hit=(fmt==='json'&&b.textContent.includes('JSON'))||(fmt==='text'&&b.textContent.includes('純文字'));
+      if(hit){const o=b.textContent;b.textContent='✅ 已複製';b.classList.add('ok');setTimeout(()=>{b.textContent=o;b.classList.remove('ok');},1800);}
+    });
+  });
+}
+function dlJSON(){
+  if(!_D)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(_D,null,2)],{type:'application/json'}));
+  a.download=`CHAI_CER_${(_D.CHAI_CER.A_IDENTITY.persona_id).replace(/[^A-Za-z0-9\-]/g,'_')}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function printCert(){
+  if(!_D)return;
+  const A=_D.CHAI_CER.A_IDENTITY,E=_D.CHAI_CER.E_AUTHORSHIP,F=_D.CHAI_CER.F_EVIDENCE,H=_D.CHAI_CER.H_CERTIFICATION;
+  const qc=document.querySelector('#qr-wrap canvas');const qi=qc?qc.toDataURL():'';
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CHAI 認證單</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}body{background:#fff;font-family:'Noto Sans TC',sans-serif;color:#111;padding:28px;}
+.c{max-width:660px;margin:0 auto;border:2px solid #8B0000;border-radius:5px;overflow:hidden;}
+.ct{background:linear-gradient(135deg,#8B0000,#D42B2B);padding:16px 22px;color:#fff;}
+.ct-s{font-size:9px;letter-spacing:.3em;opacity:.75;margin-bottom:3px;}
+.ct h2{font-size:17px;font-weight:900;letter-spacing:.05em;}
+.cb{padding:18px 22px;}
+.r{display:grid;grid-template-columns:120px 1fr;gap:3px 9px;margin-bottom:4px;border-bottom:1px solid #eee;padding-bottom:4px;}
+.r:last-of-type{border:none;}
+.rk{font-size:10px;color:#999;font-family:'Share Tech Mono',monospace;}
+.rv{font-size:11px;font-weight:500;}
+.hash{background:#f4f4f4;border:1px solid #ddd;border-radius:3px;padding:7px;font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;word-break:break-all;margin:10px 0;}
+.foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:11px;border-top:2px solid #D42B2B;}
+.foot-l{font-size:9px;color:#777;line-height:1.7;}
+.stmt{background:#fff8f0;border-left:3px solid #C9A84C;padding:7px 10px;font-size:10px;color:#555;margin:8px 0;line-height:1.6;}
+.seal{text-align:center;font-size:9px;color:#bbb;margin-top:8px;}
+@media print{body{padding:0;}@page{margin:12mm;}}</style></head><body>
+<div class="c">
+<div class="ct"><div class="ct-s">CHUNG-HUA AI · CHAI CHARACTER IP CERTIFICATE</div><h2>虛擬人物著作權認證單</h2></div>
+<div class="cb">
+<div class="r"><div class="rk">PERSONA ID</div><div class="rv">${A.persona_id}</div></div>
+<div class="r"><div class="rk">角色名稱</div><div class="rv">${A.name_zh}（${A.name_en}）</div></div>
+<div class="r"><div class="rk">角色類型</div><div class="rv">${A.character_type} · ${A.version}</div></div>
+<div class="r"><div class="rk">創作者</div><div class="rv">${E.author}</div></div>
+<div class="r"><div class="rk">所屬機構</div><div class="rv">${E.organization}</div></div>
+<div class="r"><div class="rk">記者證號</div><div class="rv">${E.press_credential}</div></div>
+<div class="r"><div class="rk">著作類型</div><div class="rv">${E.work_type}</div></div>
+${E.collaborator?`<div class="r"><div class="rk">協作者</div><div class="rv">${E.collaborator}</div></div>`:''}
+<div class="r"><div class="rk">認證機關</div><div class="rv">${H.body||'自主聲明'}</div></div>
+<div class="r"><div class="rk">認證類型</div><div class="rv">${H.type} · ${H.status}${H.number?' · '+H.number:''}</div></div>
+${H.date?`<div class="r"><div class="rk">申請日期</div><div class="rv">${H.date}</div></div>`:''}
+${H.contact?`<div class="r"><div class="rk">機關聯絡</div><div class="rv">${H.contact}</div></div>`:''}
+<div class="r"><div class="rk">水印</div><div class="rv">${F.watermark}</div></div>
+<div class="r"><div class="rk">時間戳</div><div class="rv">${F.timestamp_iso}</div></div>
+${H.statement?`<div class="stmt">${H.statement}</div>`:''}
+<div class="hash">ProofClaw SHA-256: ${F.sha256_hash}</div>
+<div class="foot">
+<div class="foot-l">${F.cdc_node} · ${F.dir_id} · ${F.cir_version}<br>中華AI CHAI · ProofClaw 認證框架<br><span style="color:#D42B2B">CHUNG-HUA AI</span></div>
+${qi?`<img src="${qi}" style="width:80px;height:80px;border-radius:3px;border:1px solid #ddd"/>`:`<div style="font-size:8px;color:#bbb;font-family:monospace;text-align:center">QR驗證<br>${A.persona_id}</div>`}
+</div>
+<div class="seal">本認證單依 CHAI ProofClaw 框架自動生成 · 供第三方認證機關存查用</div>
+</div></div>
+<script>window.onload=()=>window.print();<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else alert('請允許彈出視窗以開啟列印頁面');
+}
+
+// ── Presets ───────────────────────────────────────────────
+function sv(id,v){const e=document.getElementById(id);if(e)e.value=v;}
+function sc(gid,vals){document.querySelectorAll('#'+gid+' input[type=checkbox]').forEach(cb=>{cb.checked=vals.includes(cb.value);});}
+function loadPreset(n){
+  if(n==='yaya'){
+    sv('personaId','CHAI-YY-001');sv('nameCN','林曉亞');sv('nameEN','Ya-Ya');
+    document.getElementById('charType').value='虛擬新聞主播';
+    sv('module','ANA');sv('version','V2.0');
+    sv('hairColor','黑髮（藏藍光澤）');sv('eyeColor','深棕色');sv('outfit','藍白新聞主播正裝');sv('symbol','CHAI 胸章、耳麥');sv('visualNote','');
+    sv('personality','沉穩、專業、親和，具備多語言播報能力，代表 CHAI 系統形象');
+    sc('vg',['智慧','傳播','文化']);sc('lg',['繁體中文','台語/閩南語','英語','日語']);
+    sc('fg',['新聞播報','音樂演唱','直播主持']);sc('pg2',['GitHub Pages','YouTube','HeyGen','ElevenLabs']);
+    sv('funcNote','24小時自主播報、CHAI 系統主角色');
+    sv('authorName','張維宗（JAi）');sv('org','中華時報 雲林分局');sv('pressId','115');
+    document.getElementById('workType').value='美術著作（虛擬角色）';
+    sv('collab','3D 角色視覺設計協作者');
+    sv('cdcNode','CDC-TW-YL-01');sv('dirId','DIR-2026-YY-001');sv('cirVer','CIR-1.0');sv('refHash','');sv('watermark','©CHAI·JAi·中華時報');
+    sv('certBody','中華民國著作權局');sv('certNo','TW-CR-2026-YY-001');
+    document.getElementById('certType').value='著作權登記';document.getElementById('certStatus').value='申請中';
+    sv('certContact','https://www.tipo.gov.tw');
+    sv('certStatement','本虛擬人物「林曉亞 Ya-Ya」之形象設計、名稱及相關著作，由創作者張維宗（JAi）依著作權法第10條規定，於創作完成時取得著作權，並向主管機關申請登記存查。');
+    sv('remarks','IP 保護策略：著作權登記 + 商標申請（Ya-Ya、CHAI）');
+  }else{
+    sv('personaId','CHAI-BL-001');sv('nameCN','藍龍蝦AI');sv('nameEN','Blue');
+    document.getElementById('charType').value='AI 對話夥伴';
+    sv('module','BI');sv('version','V1.0');
+    sv('hairColor','藍色（深海色調）');sv('eyeColor','冰藍色');sv('outfit','現代科技風格外觀');sv('symbol','藍色龍蝦元素、科技光紋');sv('visualNote','以龍蝦為靈感的虛擬AI夥伴');
+    sv('personality','幽默、機智、創作者導向，善於協助內容製作與創意發想');
+    sc('vg',['智慧','創造力','海洋','科技','龍']);sc('lg',['繁體中文','英語']);
+    sc('fg',['AI對話','社群互動','直播主持']);sc('pg2',['GitHub Pages','YouTube']);
+    sv('funcNote','需 Claude API 即時連線支援');
+    sv('authorName','張維宗（JAi）');sv('org','中華時報 雲林分局');sv('pressId','115');
+    document.getElementById('workType').value='美術著作（虛擬角色）';
+    sv('collab','3D 角色視覺設計協作者');
+    sv('cdcNode','CDC-TW-YL-01');sv('dirId','DIR-2026-BL-001');sv('cirVer','CIR-1.0');sv('refHash','');sv('watermark','©CHAI·JAi·藍龍蝦AI');
+    sv('certBody','中華民國著作權局');sv('certNo','TW-CR-2026-BL-001');
+    document.getElementById('certType').value='著作權登記';document.getElementById('certStatus').value='申請中';
+    sv('certContact','https://www.tipo.gov.tw');
+    sv('certStatement','本虛擬人物「藍龍蝦AI Blue」之形象設計、名稱及相關著作，由創作者張維宗（JAi）依著作權法規定取得著作權，並申請登記存查。');
+    sv('remarks','需 Pro 帳號或後端 Proxy 支援 Claude API 即時對話功能');
+  }
+}
+</script>
+</body>
+</html>
