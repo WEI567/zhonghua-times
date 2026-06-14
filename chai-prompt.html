@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAI AI Prompt 生成器</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+:root{
+  --red:#D42B2B;--rd:#8B0000;--gold:#C9A84C;--gl:#F0D080;
+  --bg:#050A0E;--b2:#0A1018;--b3:#0F1820;
+  --br:rgba(201,168,76,0.2);--tx:#E8E0D0;--dm:#7A7060;
+  --gn:#3CB878;--bl:#4A9ECC;
+  --mono:'Share Tech Mono',monospace;--sans:'Noto Sans TC',sans-serif;--orb:'Orbitron',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:0 14px 80px;}
+
+/* Header */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(5,10,14,0.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--br);padding:10px 14px;display:flex;align-items:center;gap:12px;}
+.topbar-brand{font-family:var(--orb);font-size:11px;color:var(--gold);letter-spacing:.25em;}
+.topbar-sub{font-family:var(--mono);font-size:9px;color:var(--dm);letter-spacing:.15em;}
+
+.hero{padding:28px 0 20px;text-align:center;border-bottom:1px solid var(--br);margin-bottom:24px;}
+.hero-eye{font-family:var(--mono);font-size:9px;letter-spacing:.35em;color:var(--gold);opacity:.7;margin-bottom:8px;}
+.hero-h1{font-family:var(--orb);font-size:clamp(17px,5vw,26px);font-weight:900;color:var(--gl);text-shadow:0 0 28px rgba(201,168,76,.35);}
+.hero-h1 em{color:var(--red);font-style:normal;}
+.hero-sub{font-family:var(--mono);font-size:9px;color:var(--dm);letter-spacing:.15em;margin-top:7px;}
+
+/* Input area */
+.input-sec{background:var(--b2);border:1px solid var(--br);border-radius:4px;margin-bottom:18px;overflow:hidden;}
+.input-hd{background:linear-gradient(90deg,rgba(212,43,43,.13),transparent);border-bottom:1px solid var(--br);padding:9px 14px;display:flex;align-items:center;gap:9px;}
+.input-id{font-family:var(--mono);font-size:9px;color:var(--red);letter-spacing:.15em;}
+.input-tt{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.1em;}
+.input-bd{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.input-bd.full{grid-template-columns:1fr;}
+.f{display:flex;flex-direction:column;gap:4px;}
+.f.s2{grid-column:span 2;}
+label.lbl{font-size:9px;color:var(--dm);letter-spacing:.15em;font-family:var(--mono);}
+input,select,textarea{background:var(--b3);border:1px solid rgba(201,168,76,.18);border-radius:3px;color:var(--tx);font-family:var(--sans);font-size:13px;padding:7px 9px;outline:none;transition:border-color .2s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+input::placeholder,textarea::placeholder{color:#3a3a3a;font-size:11px;}
+select option{background:var(--b3);}
+textarea{resize:vertical;min-height:64px;line-height:1.5;}
+.chk-g{display:flex;flex-wrap:wrap;gap:7px;padding:3px 0;}
+.chk-i{display:flex;align-items:center;gap:4px;cursor:pointer;}
+.chk-i input[type=checkbox]{width:13px;height:13px;accent-color:var(--gold);padding:0;}
+.chk-i span{font-size:11px;color:var(--tx);}
+
+/* Preset */
+.preset-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.btn-pre{display:block;width:100%;padding:10px 6px;background:rgba(201,168,76,.07);border:1px solid var(--br);border-radius:4px;color:var(--gold);font-family:var(--mono);font-size:9px;letter-spacing:.08em;cursor:pointer;transition:all .2s;text-align:center;}
+.btn-pre:hover{border-color:var(--gold);background:rgba(201,168,76,.16);}
+
+/* Generate btn */
+.btn-gen{display:block;width:100%;padding:15px;background:linear-gradient(135deg,var(--rd),var(--red));border:1px solid var(--red);border-radius:4px;color:#fff;font-family:var(--orb);font-size:12px;font-weight:700;letter-spacing:.22em;cursor:pointer;transition:all .2s;box-shadow:0 0 18px rgba(212,43,43,.28);margin-bottom:14px;}
+.btn-gen:hover{box-shadow:0 0 28px rgba(212,43,43,.55);}
+.btn-gen:disabled{opacity:.5;cursor:wait;}
+
+/* Output tabs */
+.out-tabs{display:flex;border:1px solid var(--br);border-radius:4px 4px 0 0;overflow:hidden;margin-top:24px;}
+.out-tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;background:var(--b2);border-right:1px solid var(--br);font-family:var(--mono);font-size:9px;color:var(--dm);letter-spacing:.1em;transition:all .2s;}
+.out-tab:last-child{border-right:none;}
+.out-tab.on{background:linear-gradient(135deg,rgba(212,43,43,.18),rgba(201,168,76,.08));color:var(--gl);border-bottom:2px solid var(--gold);}
+
+.out-panel{display:none;background:var(--b2);border:1px solid var(--br);border-top:none;border-radius:0 0 4px 4px;padding:16px;}
+.out-panel.on{display:block;}
+
+/* Result card */
+.result-card{background:var(--b3);border:1px solid var(--br);border-radius:4px;padding:14px;margin-bottom:12px;}
+.result-label{font-family:var(--mono);font-size:9px;color:var(--red);letter-spacing:.2em;margin-bottom:8px;}
+.result-content{font-size:12px;line-height:1.8;color:var(--tx);white-space:pre-wrap;word-break:break-word;}
+.result-content.en{font-size:11px;color:#B8D0B0;font-family:var(--mono);}
+
+.copy-btn{display:inline-block;margin-top:10px;padding:7px 14px;background:transparent;border:1px solid var(--br);border-radius:3px;color:var(--gold);font-family:var(--mono);font-size:9px;letter-spacing:.1em;cursor:pointer;transition:all .2s;}
+.copy-btn:hover{border-color:var(--gold);background:rgba(201,168,76,.1);}
+.copy-btn.ok{border-color:var(--gn);color:var(--gn);}
+
+/* Loading */
+.loading{text-align:center;padding:32px;display:none;}
+.loading.on{display:block;}
+.spinner{width:36px;height:36px;border:3px solid rgba(201,168,76,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-txt{font-family:var(--mono);font-size:10px;color:var(--dm);letter-spacing:.15em;}
+
+/* Tag */
+.tag-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.tag{display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:2px;font-size:9px;color:var(--gold);padding:2px 7px;font-family:var(--mono);}
+.tag.red{background:rgba(212,43,43,.1);border-color:rgba(212,43,43,.25);color:var(--red);}
+.tag.gn{background:rgba(60,184,120,.1);border-color:rgba(60,184,120,.25);color:var(--gn);}
+
+/* Section divider */
+.divider{height:1px;background:var(--br);margin:14px 0;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+
+@media(max-width:520px){
+  .input-bd{grid-template-columns:1fr;}
+  .f.s2{grid-column:span 1;}
+  .preset-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="topbar-brand">CHAI · AI PROMPT 生成器</div>
+    <div class="topbar-sub">HEYGEN · SUNO · 角色擴寫 · POWERED BY CLAUDE</div>
+  </div>
+</div>
+
+<div class="wrap">
+<div class="hero">
+  <div class="hero-eye">CHUNG-HUA AI · CHAI</div>
+  <div class="hero-h1">AI <em>Prompt</em> 生成器</div>
+  <div class="hero-sub">輸入角色資料 → Claude 自動生成 HeyGen / Suno / 角色背景 Prompt</div>
+</div>
+
+<!-- 預設 -->
+<div class="preset-row">
+  <button class="btn-pre" onclick="preset('yaya')">▶ 林曉亞 Ya-Ya</button>
+  <button class="btn-pre" onclick="preset('blue')">▶ 藍龍蝦AI Blue</button>
+  <button class="btn-pre" onclick="preset('yoyo')">▶ Yo-Yo 歌手</button>
+</div>
+
+<!-- 角色基本資料 -->
+<div class="input-sec">
+  <div class="input-hd"><span class="input-id">[A]</span><span class="input-tt">角色基本資料</span></div>
+  <div class="input-bd">
+    <div class="f"><label class="lbl">角色中文名稱</label><input id="nameCN" placeholder="林曉亞"/></div>
+    <div class="f"><label class="lbl">角色英文名稱</label><input id="nameEN" placeholder="Ya-Ya"/></div>
+    <div class="f"><label class="lbl">角色類型</label>
+      <select id="charType">
+        <option>虛擬新聞主播</option><option>虛擬歌手</option><option>虛擬偶像</option>
+        <option>AI 對話夥伴</option><option>品牌代言人</option>
+      </select>
+    </div>
+    <div class="f"><label class="lbl">個性風格</label><input id="personality" placeholder="沉穩、專業、親和"/></div>
+  </div>
+</div>
+
+<!-- 外觀 -->
+<div class="input-sec">
+  <div class="input-hd"><span class="input-id">[B]</span><span class="input-tt">外觀設定（HeyGen/圖像用）</span></div>
+  <div class="input-bd">
+    <div class="f"><label class="lbl">髮色</label><input id="hairColor" placeholder="黑髮（藏藍光澤）"/></div>
+    <div class="f"><label class="lbl">眼睛顏色</label><input id="eyeColor" placeholder="深棕色"/></div>
+    <div class="f"><label class="lbl">服裝風格</label><input id="outfit" placeholder="藍白新聞主播正裝"/></div>
+    <div class="f"><label class="lbl">整體氛圍</label><input id="vibe" placeholder="現代科技感、專業媒體"/></div>
+    <div class="f s2"><label class="lbl">特殊元素 / 道具</label><input id="props" placeholder="CHAI 胸章、耳麥、全息光效"/></div>
+  </div>
+</div>
+
+<!-- 音樂 -->
+<div class="input-sec">
+  <div class="input-hd"><span class="input-id">[C]</span><span class="input-tt">音樂設定（Suno 用）</span></div>
+  <div class="input-bd">
+    <div class="f"><label class="lbl">曲風類型</label><input id="genre" placeholder="Cyberpunk Chinese Fusion / K-Pop / EDM"/></div>
+    <div class="f"><label class="lbl">主題樂器</label><input id="instrument" placeholder="二胡 + 電子合成器"/></div>
+    <div class="f"><label class="lbl">歌曲情緒</label><input id="mood" placeholder="振奮、希望、未來感"/></div>
+    <div class="f"><label class="lbl">演唱語言</label>
+      <select id="singLang">
+        <option>繁體中文</option><option>中英混合</option><option>純英語</option><option>日語</option><option>台語</option>
+      </select>
+    </div>
+    <div class="f s2"><label class="lbl">歌詞主題 / 核心概念</label><textarea id="lyricTheme" placeholder="新聞的聲音、傳遞真相、AI主播的使命…"></textarea></div>
+  </div>
+</div>
+
+<!-- 背景故事 -->
+<div class="input-sec">
+  <div class="input-hd"><span class="input-id">[D]</span><span class="input-tt">背景故事設定</span></div>
+  <div class="input-bd full">
+    <div class="f"><label class="lbl">角色起源 / 背景</label><textarea id="origin" placeholder="在 CHAI 系統中誕生，由中華時報雲林分局張維宗創造…"></textarea></div>
+    <div class="f"><label class="lbl">核心使命</label><input id="mission" placeholder="用 AI 傳遞真實新聞、打破資訊壟斷"/></div>
+    <div class="f"><label class="lbl">特殊能力 / 技能</label><input id="ability" placeholder="多語言播報、情感分析、即時事實查核"/></div>
+  </div>
+</div>
+
+<button class="btn-gen" id="genBtn" onclick="generate()">⚡ 生成所有 Prompt · GENERATE</button>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-txt">Claude 生成中，請稍候…</div>
+</div>
+
+<!-- Output -->
+<div id="output" style="display:none">
+  <div class="out-tabs">
+    <div class="out-tab on" onclick="switchTab(0)">🎬 HeyGen</div>
+    <div class="out-tab" onclick="switchTab(1)">🎵 Suno</div>
+    <div class="out-tab" onclick="switchTab(2)">📖 角色擴寫</div>
+    <div class="out-tab" onclick="switchTab(3)">🎨 圖像</div>
+  </div>
+
+  <!-- HeyGen -->
+  <div class="out-panel on" id="panel0">
+    <div class="result-card">
+      <div class="result-label">HEYGEN · 角色外觀描述（英文，直接貼入）</div>
+      <div class="result-content en" id="heygenEN"></div>
+      <button class="copy-btn" onclick="cp('heygenEN')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">HEYGEN · 說話風格 / 腳本提示</div>
+      <div class="result-content" id="heygenScript"></div>
+      <button class="copy-btn" onclick="cp('heygenScript')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">HEYGEN · 建議場景設定</div>
+      <div class="result-content" id="heygenScene"></div>
+      <button class="copy-btn" onclick="cp('heygenScene')">複製</button>
+    </div>
+  </div>
+
+  <!-- Suno -->
+  <div class="out-panel" id="panel1">
+    <div class="result-card">
+      <div class="result-label">SUNO · Style Prompt（直接貼入 Style of Music）</div>
+      <div class="result-content en" id="sunoStyle"></div>
+      <button class="copy-btn" onclick="cp('sunoStyle')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">SUNO · 歌詞框架（段落結構）</div>
+      <div class="result-content" id="sunoLyrics"></div>
+      <button class="copy-btn" onclick="cp('sunoLyrics')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">SUNO · 歌曲標題建議</div>
+      <div class="result-content" id="sunoTitle"></div>
+      <button class="copy-btn" onclick="cp('sunoTitle')">複製</button>
+    </div>
+  </div>
+
+  <!-- 角色擴寫 -->
+  <div class="out-panel" id="panel2">
+    <div class="result-card">
+      <div class="result-label">角色完整背景故事</div>
+      <div class="result-content" id="storyFull"></div>
+      <button class="copy-btn" onclick="cp('storyFull')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">角色自我介紹（播報用）</div>
+      <div class="result-content" id="storySelf"></div>
+      <button class="copy-btn" onclick="cp('storySelf')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">角色社群媒體 Bio（Threads / IG 用）</div>
+      <div class="result-content" id="storyBio"></div>
+      <button class="copy-btn" onclick="cp('storyBio')">複製</button>
+    </div>
+  </div>
+
+  <!-- 圖像 -->
+  <div class="out-panel" id="panel3">
+    <div class="result-card">
+      <div class="result-label">Midjourney / Leonardo · 角色圖像 Prompt（英文）</div>
+      <div class="result-content en" id="imgPromptEN"></div>
+      <button class="copy-btn" onclick="cp('imgPromptEN')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Stable Diffusion · 負向 Prompt</div>
+      <div class="result-content en" id="imgNegative"></div>
+      <button class="copy-btn" onclick="cp('imgNegative')">複製</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label">角色視覺設計方向（給美術設計師）</div>
+      <div class="result-content" id="imgDirection"></div>
+      <button class="copy-btn" onclick="cp('imgDirection')">複製</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- wrap -->
+
+<script>
+// ── Presets ────────────────────────────────────────────────
+function sv(id,v){const e=document.getElementById(id);if(e)e.value=v;}
+function preset(n){
+  if(n==='yaya'){
+    sv('nameCN','林曉亞');sv('nameEN','Ya-Ya');
+    document.getElementById('charType').value='虛擬新聞主播';
+    sv('personality','沉穩、專業、親和，具多語言播報能力');
+    sv('hairColor','黑髮（藏藍光澤，微微反光）');sv('eyeColor','深棕色，清澈堅定');
+    sv('outfit','藍白新聞主播正裝，胸前別 CHAI 金色胸章');sv('vibe','現代科技感、專業媒體播報室');
+    sv('props','耳麥、CHAI 胸章、全息數據光效背景');
+    sv('genre','Cyberpunk Chinese Fusion');sv('instrument','二胡 + 電子合成器 + 鼓機');
+    sv('mood','振奮、希望、未來感、使命必達');
+    document.getElementById('singLang').value='繁體中文';
+    sv('lyricTheme','新聞的聲音、傳遞真相、AI主播的使命、跨越語言的連結');
+    sv('origin','在 CHAI 中華AI系統中誕生，由中華時報雲林分局記者張維宗（JAi）創造，以傳遞真實新聞為使命');
+    sv('mission','用 AI 打破資訊壟斷，讓每個人都能獲得真實的新聞');
+    sv('ability','多語言播報（中文、台語、英語、日語）、即時事實查核、情感分析');
+  }else if(n==='blue'){
+    sv('nameCN','藍龍蝦AI');sv('nameEN','Blue');
+    document.getElementById('charType').value='AI 對話夥伴';
+    sv('personality','幽默、機智、創作者導向，善於激發創意');
+    sv('hairColor','深海藍色，帶電光紋路');sv('eyeColor','冰藍色，發光');
+    sv('outfit','現代科技風，深藍色外殼，龍蝦元素裝飾');sv('vibe','深海科技、神秘創意');
+    sv('props','龍蝦鉗造型能量裝置、CHAI 標誌光環');
+    sv('genre','Synthwave / Cyberpunk Electronic');sv('instrument','電子合成器 + 貝斯 + 電吉他');
+    sv('mood','神秘、酷炫、充滿能量');
+    document.getElementById('singLang').value='中英混合';
+    sv('lyricTheme','深海探索、AI創作、突破極限、與創作者並肩');
+    sv('origin','CHAI 系統中的創意輔助模組，以深海龍蝦為靈感，象徵在壓力下越戰越強');
+    sv('mission','協助創作者突破創意瓶頸，與人類共同創作出獨特作品');
+    sv('ability','即時創意發想、多平台內容生成、Claude API 即時對話');
+  }else{
+    sv('nameCN','Yo-Yo');sv('nameEN','Yo-Yo');
+    document.getElementById('charType').value='虛擬歌手';
+    sv('personality','活潑、充滿感情、聲音穿透力強');
+    sv('hairColor','漸層紫粉色，長髮飄逸');sv('eyeColor','星空紫，閃爍光點');
+    sv('outfit','未來感演唱會服裝，光纖布料，隨音樂節拍發光');sv('vibe','虛擬演唱會、夢幻科技');
+    sv('props','懸浮麥克風、全息舞台特效、音符粒子');
+    sv('genre','J-Pop / Vocaloid Fusion / Cyberpop');sv('instrument','虛擬鋼琴 + 電子音效 + 管弦樂');
+    sv('mood','夢幻、感動、充滿希望');
+    document.getElementById('singLang').value='中英混合';
+    sv('lyricTheme','虛擬與現實的邊界、音樂的力量、對未來的想像');
+    sv('origin','CHAI 系統中的音樂模組，以 Suno AI + ElevenLabs 為技術基礎，由 JAi 創作歌詞');
+    sv('mission','用歌聲跨越虛實界線，讓 AI 音樂真正感動人心');
+    sv('ability','多語言演唱、即時作詞、虛擬演唱會表演');
+  }
+}
+
+// ── Tabs ───────────────────────────────────────────────────
+function switchTab(n){
+  document.querySelectorAll('.out-tab').forEach((t,i)=>t.classList.toggle('on',i===n));
+  document.querySelectorAll('.out-panel').forEach((p,i)=>p.classList.toggle('on',i===n));
+}
+
+// ── Copy ───────────────────────────────────────────────────
+function cp(id){
+  const el=document.getElementById(id);if(!el)return;
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    const btn=el.nextElementSibling;if(!btn)return;
+    const o=btn.textContent;btn.textContent='✅ 已複製';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent=o;btn.classList.remove('ok');},1800);
+  });
+}
+
+// ── Generate ───────────────────────────────────────────────
+async function generate(){
+  const nameCN=document.getElementById('nameCN').value.trim()||'未命名角色';
+  const nameEN=document.getElementById('nameEN').value.trim()||'Character';
+  const charType=document.getElementById('charType').value;
+  const personality=document.getElementById('personality').value.trim();
+  const hairColor=document.getElementById('hairColor').value.trim();
+  const eyeColor=document.getElementById('eyeColor').value.trim();
+  const outfit=document.getElementById('outfit').value.trim();
+  const vibe=document.getElementById('vibe').value.trim();
+  const props=document.getElementById('props').value.trim();
+  const genre=document.getElementById('genre').value.trim();
+  const instrument=document.getElementById('instrument').value.trim();
+  const mood=document.getElementById('mood').value.trim();
+  const singLang=document.getElementById('singLang').value;
+  const lyricTheme=document.getElementById('lyricTheme').value.trim();
+  const origin=document.getElementById('origin').value.trim();
+  const mission=document.getElementById('mission').value.trim();
+  const ability=document.getElementById('ability').value.trim();
+
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true;
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('output').style.display='none';
+
+  const prompt=`你是 CHAI 中華AI 系統的創作助理。根據以下虛擬角色資料，生成完整的 AI 創作 Prompt 套件。
+
+角色資料：
+- 名稱：${nameCN}（${nameEN}）
+- 類型：${charType}
+- 個性：${personality}
+- 髮色：${hairColor}
+- 眼睛：${eyeColor}
+- 服裝：${outfit}
+- 整體氛圍：${vibe}
+- 特殊道具：${props}
+- 曲風：${genre}
+- 主題樂器：${instrument}
+- 歌曲情緒：${mood}
+- 演唱語言：${singLang}
+- 歌詞主題：${lyricTheme}
+- 角色起源：${origin}
+- 核心使命：${mission}
+- 特殊能力：${ability}
+
+請以 JSON 格式回應，包含以下欄位（全部必填，不要省略）：
+{
+  "heygenEN": "HeyGen 角色外觀英文描述，200字以內，描述外觀、表情、氛圍",
+  "heygenScript": "HeyGen 說話風格提示，中文，包含語速、語調、表情建議",
+  "heygenScene": "HeyGen 場景設定建議，中文，包含背景、燈光、道具",
+  "sunoStyle": "Suno Style Prompt，純英文，50字以內，曲風標籤組合",
+  "sunoLyrics": "Suno 歌詞框架，繁體中文，包含主歌A/B段、副歌、橋段，每段4行",
+  "sunoTitle": "3個歌曲標題建議，中文+英文對照",
+  "storyFull": "角色完整背景故事，繁體中文，300字，包含起源、成長、使命",
+  "storySelf": "角色第一人稱自我介紹，繁體中文，100字，適合播報開場用",
+  "storyBio": "社群媒體 Bio，繁體中文，50字以內，適合 Threads/IG",
+  "imgPromptEN": "Midjourney/Leonardo 圖像 Prompt，英文，包含外觀、風格、光效、構圖，150字",
+  "imgNegative": "Stable Diffusion 負向 Prompt，英文，排除不需要的元素",
+  "imgDirection": "給美術設計師的視覺設計方向，中文，包含色系、風格、參考作品方向"
+}
+
+只回傳 JSON，不要其他文字。`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.map(c=>c.text||'').join('');
+    const clean=text.replace(/```json|```/g,'').trim();
+    const json=JSON.parse(clean);
+
+    // Fill results
+    const fields=['heygenEN','heygenScript','heygenScene','sunoStyle','sunoLyrics','sunoTitle','storyFull','storySelf','storyBio','imgPromptEN','imgNegative','imgDirection'];
+    fields.forEach(f=>{
+      const el=document.getElementById(f);
+      if(el)el.textContent=json[f]||'（生成失敗，請重試）';
+    });
+
+    document.getElementById('output').style.display='block';
+    document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    alert('生成失敗：'+e.message+'\n請確認網路連線後重試。');
+  }finally{
+    btn.disabled=false;
+    document.getElementById('loading').classList.remove('on');
+  }
+}
+</script>
+</body>
+</html>
