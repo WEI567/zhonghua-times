@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAI 進度快照</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; background: #fff; color: #111; padding: 16px; max-width: 680px; margin: auto; font-size: 16px; line-height: 1.6; }
+  h1 { font-size: 1.4em; color: #003399; border-bottom: 2px solid #003399; padding-bottom: 8px; }
+  h2 { font-size: 1.1em; color: #003399; margin-top: 24px; border-left: 4px solid #003399; padding-left: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  td, th { border: 1px solid #ccc; padding: 8px 10px; vertical-align: top; font-size: 0.95em; }
+  th { background: #e8eeff; color: #003; font-weight: bold; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin: 6px 0; font-size: 0.95em; }
+  .done { color: #007700; }
+  .wip  { color: #cc6600; }
+  .todo { color: #0033cc; }
+  .block{ color: #cc0000; }
+  pre { background: #f5f5f5; border: 1px solid #ccc; padding: 12px; border-radius: 8px; font-size: 0.88em; white-space: pre-wrap; word-break: break-all; color: #111; }
+  .updated { color: #666; font-size: 0.85em; }
+  #notes { background: #fffbe6; border: 2px solid #f0c040; border-radius: 8px; padding: 12px; min-height: 100px; font-size: 0.95em; color: #111; outline: none; }
+  button { margin-top: 12px; padding: 12px 24px; background: #003399; color: #fff; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>🧠 CHAI 專案進度快照</h1>
+<p class="updated">最後更新：<span id="ts"></span><br>負責人：張維宗 JAi ／ 中華時報雲林辦事處 記者證 #115</p>
+
+<h2>📌 身份與品牌</h2>
+<table>
+<tr><th>項目</th><th>內容</th></tr>
+<tr><td>本名</td><td>張維宗（JAi / JAI / JWC / WCJ）</td></tr>
+<tr><td>品牌</td><td>CHAI（中華AI / CHUNG-HUA AI）</td></tr>
+<tr><td>主角色</td><td>林曉亞 Ya-Ya　虛擬新聞主播</td></tr>
+<tr><td>GitHub</td><td>WEI567 ／ repo: zhonghua-times</td></tr>
+<tr><td>部署網址</td><td>wei567.github.io/zhonghua-times</td></tr>
+<tr><td>Threads</td><td>wcw384</td></tr>
+</table>
+
+<h2>✅ 已完成</h2>
+<ul>
+<li class="done">✅ Ya-Ya HTML廣播介面（index.html，瀏覽器TTS）</li>
+<li class="done">✅ HeyGen 14秒唇形同步影片</li>
+<li class="done">✅ CHAI_CER_ALL.html（角色存證紀錄產生器）</li>
+<li class="done">✅ chai-prompt.html（AI Prompt產生器）</li>
+<li class="done">✅ 記者證產生器</li>
+<li class="done">✅ 商標申請文件草稿（智慧財產局）</li>
+<li class="done">✅ Suno AI 音樂 101首+（含《新聞的聲音》）</li>
+<li class="done">✅ ProofClaw SHA-256 時間戳記系統設計</li>
+<li class="done">✅ CHAI_STATUS.html 進度快照檔</li>
+</ul>
+
+<h2>🔧 進行中 / 卡關</h2>
+<ul>
+<li class="wip">🔧 GitHub Pages 部署（iPhone Safari/Firefox 限制）</li>
+<li class="wip">🔧 商標正式送件（約5,000 NTD）</li>
+<li class="wip">🔧 TuneCore音樂發行（登入問題）</li>
+<li class="block">🚫 圖片/影片生成需外部工具（HeyGen/協作者）</li>
+</ul>
+
+<h2>⬜ 待辦</h2>
+<ul>
+<li class="todo">⬜ YouTube 發布亞亞影片</li>
+<li class="todo">⬜ iCloud Drive 音樂備份</li>
+<li class="todo">⬜ 版權聲明正式歸檔</li>
+</ul>
+
+<h2>🏗 CHAI 子系統</h2>
+<table>
+<tr><th>子系統</th><th>功能</th></tr>
+<tr><td>CDC</td><td>內容簽署</td></tr>
+<tr><td>DIR</td><td>事實查核 / 完整性</td></tr>
+<tr><td>ProofClaw</td><td>Merkle Tree 時間戳記</td></tr>
+<tr><td>CIR</td><td>不可變性鎖定</td></tr>
+</table>
+
+<h2>📝 給Claude的接力說明（固定）</h2>
+<pre>我是張維宗（JAi），記者，中華時報雲林辦事處，記者證#115。
+我在建立CHAI（中華AI）虛擬媒體生態系，主角色是林曉亞Ya-Ya虛擬新聞主播。
+GitHub: WEI567 / zhonghua-times
+我只用iPhone操作，不擅技術，請給我可直接複製貼上的成品。
+不要問太多，直接幫我做。</pre>
+
+<h2>✏️ 本次新進度（每次手動填寫）</h2>
+<div id="notes" contenteditable="true">在這裡寫今天做了什麼……</div>
+
+<button onclick="copyAll()">📋 複製全部接力說明，貼給Claude用</button>
+
+<script>
+document.getElementById('ts').textContent = new Date().toLocaleString('zh-TW');
+function copyAll() {
+  const fixed = `我是張維宗（JAi），記者，中華時報雲林辦事處，記者證#115。
+我在建立CHAI（中華AI）虛擬媒體生態系，主角色是林曉亞Ya-Ya虛擬新聞主播。
+GitHub: WEI567 / zhonghua-times
+我只用iPhone操作，不擅技術，請給我可直接複製貼上的成品。
+不要問太多，直接幫我做。`;
+  const notes = document.getElementById('notes').innerText.trim();
+  const full = fixed + '\n\n本次進度：\n' + notes;
+  navigator.clipboard.writeText(full).then(() => alert('✅ 已複製！開新對話直接貼給Claude。'));
+}
+</script>
+
+</body>
+</html>
