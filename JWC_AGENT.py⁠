@@ -1,1 +1,23 @@
 JWC_AGENT.py⁠
+# JWC-AGENT-V4.0 | Core Engine
+# Owner: CHANG WEI TSUNG (JWC)
+# Purpose: Digital Asset Authentication & Sealing
+
+import hashlib
+import datetime
+
+def seal_asset(asset_name, content):
+    timestamp = datetime.datetime.now().isoformat()
+    # 創建資產唯一指紋
+    signature = hashlib.sha256((asset_name + content + timestamp).encode()).hexdigest()
+    
+    seal_record = {
+        "Asset": asset_name,
+        "Owner": "CHANG WEI TSUNG",
+        "Timestamp": timestamp,
+        "Signature": signature
+    }
+    return seal_record
+
+# 範例執行：確權您的中華時報內容
+print(seal_asset("Zhonghua-Times-Content", "Initial System Deployment"))
